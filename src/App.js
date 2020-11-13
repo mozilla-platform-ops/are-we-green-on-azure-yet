@@ -92,7 +92,7 @@ function App() {
               suite
             </th>
             {
-              pools.map(pool => (
+              pools.sort().map(pool => (
                 <th className="text-muted text-center">
                   {pool.split('/')[1].replace('-azure', '')}
                 </th>
@@ -102,11 +102,11 @@ function App() {
         </thead>
         <tbody>
           {
-            Object.keys(testSuiteResults).map(suite => (
+            Object.keys(testSuiteResults).sort().map(suite => (
               <tr>
                 <td className="text-right">{suite}</td>
                 {
-                  pools.map(pool => (
+                  pools.sort().map(pool => (
                     <td className="text-center">
                       {
                         testSuiteResults[suite][pool].map(task => (
@@ -126,6 +126,9 @@ function App() {
           }
         </tbody>
       </Table>
+      <p>
+        the code for this github page is hosted at: <a href="https://github.com/mozilla-platform-ops/are-we-green-on-azure-yet">github.com/mozilla-platform-ops/are-we-green-on-azure-yet</a>.
+      </p>
     </Container>
   );
 }
