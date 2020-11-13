@@ -1,8 +1,8 @@
 {
   "files": {
     "main.css": "/are-we-green-on-azure-yet/static/css/main.6dea0f05.chunk.css",
-    "main.js": "/are-we-green-on-azure-yet/static/js/main.59e4ceff.chunk.js",
-    "main.js.map": "/are-we-green-on-azure-yet/static/js/main.59e4ceff.chunk.js.map",
+    "main.js": "/are-we-green-on-azure-yet/static/js/main.e7ffdfa7.chunk.js",
+    "main.js.map": "/are-we-green-on-azure-yet/static/js/main.e7ffdfa7.chunk.js.map",
     "runtime-main.js": "/are-we-green-on-azure-yet/static/js/runtime-main.a2a72fc6.js",
     "runtime-main.js.map": "/are-we-green-on-azure-yet/static/js/runtime-main.a2a72fc6.js.map",
     "static/css/2.109aacae.chunk.css": "/are-we-green-on-azure-yet/static/css/2.109aacae.chunk.css",
@@ -20,6 +20,6 @@
     "static/css/2.109aacae.chunk.css",
     "static/js/2.fa7cd6bd.chunk.js",
     "static/css/main.6dea0f05.chunk.css",
-    "static/js/main.59e4ceff.chunk.js"
+    "static/js/main.e7ffdfa7.chunk.js"
   ]
 }
