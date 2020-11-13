@@ -246,6 +246,22 @@ function App() {
         </tbody>
       </Table>
       <ul>
+        <li>
+          status legend:
+          {
+            Object.keys(color).map(state => (
+              <div>
+                <FontAwesomeIcon
+                  style={{margin: '0 1px'}}
+                  className={['pending', 'running'].includes(state) ? 'fa-sm fa-spin' : 'fa-sm'}
+                  icon={icon[state]}
+                  color={color[state]} />
+                &nbsp;
+                {state}
+              </div>
+            ))
+          }
+        </li>
         <li className="text-muted">
           task status counts, in the tl;dr table, are determined by the last task run for the test suite and platform.
         </li>
