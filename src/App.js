@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import Badge from 'react-bootstrap/Badge';
+import Button from 'react-bootstrap/Button';
 import Container from 'react-bootstrap/Container';
 import Spinner from 'react-bootstrap/Spinner';
 import Table from 'react-bootstrap/Table';
@@ -35,33 +37,35 @@ function App() {
   const [tasks, setTasks] = useState([]);
   const [testSuiteResults, setTestSuiteResults] = useState({});
   useEffect(() => {
-    usualSuspects.forEach(suspect => {
-      fetch(`https://hg.mozilla.org/try/json-pushes?full=1&startdate=2020-11-10&user=${suspect}`)
-        .then(response => response.json())
-        .then(pushLog => {
-          Object.keys(pushLog)
-            .filter(pushId => pushLog[pushId].changesets[0].files[0] === 'try_task_config.json')
-            .forEach(pushId => {
-              fetch(`https://firefox-ci-tc.services.mozilla.com/api/index/v1/tasks/gecko.v2.try.pushlog-id.${pushId}`)
-                .then(response => {
-                  if (response.ok) return response.json();
-                  throw response;
-                })
-                .then(index => {
-                  setGroups(_groups => [
-                    ..._groups.filter(_group => _group !== index.tasks[0].taskId),
-                    index.tasks[0].taskId
-                  ])
-                }).catch(err => {
-                  console.error(err);
-                });
-            });
-        })
-        .catch(err => {
-          console.error(err);
-        });
-    });
-  }, []);
+    if (!groups.length) {
+      usualSuspects.forEach(suspect => {
+        fetch(`https://hg.mozilla.org/try/json-pushes?full=1&startdate=2020-11-10&user=${suspect}`)
+          .then(response => response.json())
+          .then(pushLog => {
+            Object.keys(pushLog)
+              .filter(pushId => pushLog[pushId].changesets[0].files[0] === 'try_task_config.json')
+              .forEach(pushId => {
+                fetch(`https://firefox-ci-tc.services.mozilla.com/api/index/v1/tasks/gecko.v2.try.pushlog-id.${pushId}`)
+                  .then(response => {
+                    if (response.ok) return response.json();
+                    throw response;
+                  })
+                  .then(index => {
+                    setGroups(_groups => [
+                      ..._groups.filter(_group => _group !== index.tasks[0].taskId),
+                      index.tasks[0].taskId
+                    ])
+                  }).catch(err => {
+                    console.error(err);
+                  });
+              });
+          })
+          .catch(err => {
+            console.error(err);
+          });
+      });
+    }
+  }, [groups]);
   useEffect(() => {
     groups.forEach(taskGroupId => {
       fetch(`https://firefox-ci-tc.services.mozilla.com/api/queue/v1/task-group/${taskGroupId}/list`)
@@ -126,10 +130,10 @@ function App() {
         tl;dr
       </h2>
       <Table>
-        <tbody>
-          {
-            pools.sort().map(pool => (
-              <tr key={pool}>
+        {
+          pools.sort().map(pool => (
+            <tbody key={pool}>
+              <tr>
                 <td className="text-right" style={{width: '50%'}}>
                   <h6>
                     {pool.split('/')[1].replace('-azure', '')}
@@ -158,9 +162,43 @@ function App() {
                   }
                 </td>
               </tr>
-            ))
-          }
-        </tbody>
+              <tr className="text-center">
+                <td colSpan="2">
+                  {
+                    Object.keys(color).map(state => (
+                      <Button
+                        key={state}
+                        style={{ marginLeft: '0.3em' }}
+                        variant="outline-secondary"
+                        size="sm">
+                        <FontAwesomeIcon
+                          style={{margin: '0 1px'}}
+                          className={['pending', 'running'].includes(state) ? 'fa-sm fa-spin' : 'fa-sm'}
+                          icon={icon[state]}
+                          color={color[state]} />
+                        &nbsp;
+                        <Badge variant="secondary">
+                          {
+                            Object.keys(testSuiteResults).map(suite => {
+                              let poolSuitetasks = tasks
+                                .filter(t => t.suite === suite && t.pool === pool)
+                                .sort((tA, tB) => (tA.resolved < tB.resolved) ? -1 : (tA.resolved > tB.resolved) ? 1 : 0);
+                              return (!!poolSuitetasks.length)
+                                ? poolSuitetasks.slice(-1)[0].state
+                                : undefined
+                            }).filter(_state => _state === state).length
+                          } / {
+                            Object.keys(testSuiteResults).filter(suite => !!tasks.filter(t => t.suite === suite && t.pool === pool).length).length
+                          }
+                        </Badge>
+                      </Button>
+                    ))
+                  }
+                </td>
+              </tr>
+            </tbody>
+          ))
+        }
       </Table>
       <h2 className="text-muted text-center">
         detail
@@ -207,10 +245,23 @@ function App() {
           }
         </tbody>
       </Table>
-      <p>
-        the code for this github page is hosted at: <a href="https://github.com/mozilla-platform-ops/are-we-green-on-azure-yet">github.com/mozilla-platform-ops/are-we-green-on-azure-yet</a>.<br />
-        the work to green up tests is tracked in: <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1676850">bug 1676850</a>.<br />
-      </p>
+      <ul>
+        <li className="text-muted">
+          task status counts, in the tl;dr table, are determined by the last task run for the test suite and platform.
+        </li>
+        <li className="text-muted">
+          task status indicators, in the detail table, are limited to the five most recent task runs for the test suite and platform.
+        </li>
+        <li className="text-muted">
+          the try push-log is used to find task groups containing tasks that are configured to run on azure worker types for pushes from a configured subset of users.
+        </li>
+        <li>
+          the code for this github page is hosted at: <a href="https://github.com/mozilla-platform-ops/are-we-green-on-azure-yet">github.com/mozilla-platform-ops/are-we-green-on-azure-yet</a>.
+        </li>
+        <li>
+          the work to green up tests is tracked in: <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1676850">bug 1676850</a>.
+        </li>
+      </ul>
     </Container>
   );
 }
