@@ -116,7 +116,7 @@ function App() {
 
   return (
     <Container>
-      <h1 className="text-center">are we green on azure yet?</h1>
+      <h1 className="text-center">is the grass greener on the azure side?</h1>
       {
         (isLoading)
           ? (
