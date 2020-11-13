@@ -8,14 +8,14 @@ const icon = {
   failed: 'times-circle',
   exception: 'exclamation-circle',
   pending: 'spinner',
-  running: 'play-circle'
+  running: 'cog'
 };
 const color = {
   completed: 'green',
   failed: 'red',
-  exception: 'amber',
+  exception: 'orange',
   pending: 'gray',
-  running: 'blue'
+  running: 'darkgray'
 };
 
 function App() {
@@ -87,7 +87,50 @@ function App() {
 
   return (
     <Container>
-      <h1>are we green on azure yet?</h1>
+      <h1 className="text-center">are we green on azure yet?</h1>
+      <h2 className="text-muted text-center">
+        tl;dr
+      </h2>
+      <Table>
+        <tbody>
+          {
+            pools.sort().map(pool => (
+              <tr>
+                <td className="text-right" style={{width: '50%'}}>
+                  <h6>
+                    {pool.split('/')[1].replace('-azure', '')}
+                  </h6>
+                </td>
+                <td style={{width: '50%'}}>
+                  {
+                    // inspect the last task result for each suite in the pool.
+                    // if all suites have been tested and all have a last task status of completed, call it green.
+                    Object.keys(testSuiteResults).map(suite => {
+                      let poolSuitetasks = tasks
+                        .filter(t => t.suite === suite && t.pool === pool)
+                        .sort((tA, tB) => (tA.resolved < tB.resolved) ? -1 : (tA.resolved > tB.resolved) ? 1 : 0);
+                      return !!poolSuitetasks.length && poolSuitetasks.slice(-1)[0].state === 'completed'
+                    }).includes(false)
+                      ? (
+                          <h6 style={{color: 'red'}}>
+                            no
+                          </h6>
+                        )
+                      : (
+                          <h6 style={{color: 'green'}}>
+                            yes
+                          </h6>
+                        )
+                  }
+                </td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </Table>
+      <h2 className="text-muted text-center">
+        detail
+      </h2>
       <Table striped size="sm">
         <thead>
           <tr>
@@ -115,7 +158,8 @@ function App() {
                         testSuiteResults[suite][pool].sort((tA, tB) => (tA.resolved < tB.resolved) ? -1 : (tA.resolved > tB.resolved) ? 1 : 0).slice(-5).map(task => (
                           <a href={`https://firefox-ci-tc.services.mozilla.com/tasks/${task.taskId}`} target="_blank" title={task.resolved}>
                             <FontAwesomeIcon
-                              className="fa-sm"
+                              style={{margin: '0 1px'}}
+                              className={['pending', 'running'].includes(task.state) ? 'fa-sm fa-spin' : 'fa-sm'}
                               icon={icon[task.state]}
                               color={color[task.state]} />
                           </a>
