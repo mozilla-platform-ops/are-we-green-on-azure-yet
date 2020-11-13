@@ -29,7 +29,10 @@ function App() {
   const [groups, setGroups] = useState([
     'cq_jFOOGTryTs8Q3VoO9kg',
     'YAzpJW1sSAaGZ0NKw4tHCw',
-    'S8UhCdtwSfS7ciycZFViIQ'
+    'S8UhCdtwSfS7ciycZFViIQ',
+    'QcXaBa22SH6PCWysVYAyCA',
+    'IbMJaXOyQy-u4xmXLV4PKw',
+    'XsKNeXRwQi6XWcVt7gSoyg',
   ]);
   const [tasks, setTasks] = useState([]);
   const [testSuiteResults, setTestSuiteResults] = useState({});
@@ -109,8 +112,8 @@ function App() {
                   pools.sort().map(pool => (
                     <td className="text-center">
                       {
-                        testSuiteResults[suite][pool].map(task => (
-                          <a href={`https://firefox-ci-tc.services.mozilla.com/tasks/${task.taskId}`} target="_blank">
+                        testSuiteResults[suite][pool].sort((tA, tB) => (tA.resolved < tB.resolved) ? -1 : (tA.resolved > tB.resolved) ? 1 : 0).slice(-5).map(task => (
+                          <a href={`https://firefox-ci-tc.services.mozilla.com/tasks/${task.taskId}`} target="_blank" title={task.resolved}>
                             <FontAwesomeIcon
                               className="fa-sm"
                               icon={icon[task.state]}
