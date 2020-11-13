@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Container from 'react-bootstrap/Container';
+import Spinner from 'react-bootstrap/Spinner';
 import Table from 'react-bootstrap/Table';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
@@ -17,26 +18,50 @@ const color = {
   pending: 'gray',
   running: 'darkgray'
 };
+const pools = [
+  'gecko-t/win7-32-azure',
+  'gecko-t/win7-32-gpu-azure',
+  'gecko-t/win10-64-azure',
+  'gecko-t/win10-64-gpu-azure'
+];
+const usualSuspects = [
+  'mcornmesser@mozilla.com',
+  'rthijssen@mozilla.com'
+];
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
-  const [pools, setPools] = useState([
-    'gecko-t/win7-32-azure',
-    'gecko-t/win7-32-gpu-azure',
-    'gecko-t/win10-64-azure',
-    'gecko-t/win10-64-gpu-azure'
-  ]);
-  const [groups, setGroups] = useState([
-    'cq_jFOOGTryTs8Q3VoO9kg',
-    'YAzpJW1sSAaGZ0NKw4tHCw',
-    'S8UhCdtwSfS7ciycZFViIQ',
-    'QcXaBa22SH6PCWysVYAyCA',
-    'IbMJaXOyQy-u4xmXLV4PKw',
-    'XsKNeXRwQi6XWcVt7gSoyg',
-  ]);
+  const [groups, setGroups] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [testSuiteResults, setTestSuiteResults] = useState({});
-  
+  useEffect(() => {
+    usualSuspects.forEach(suspect => {
+      fetch(`https://hg.mozilla.org/try/json-pushes?full=1&startdate=2020-11-10&user=${suspect}`)
+        .then(response => response.json())
+        .then(pushLog => {
+          Object.keys(pushLog)
+            .filter(pushId => pushLog[pushId].changesets[0].files[0] === 'try_task_config.json')
+            .forEach(pushId => {
+              fetch(`https://firefox-ci-tc.services.mozilla.com/api/index/v1/tasks/gecko.v2.try.pushlog-id.${pushId}`)
+                .then(response => {
+                  if (response.ok) return response.json();
+                  throw response;
+                })
+                .then(index => {
+                  setGroups(_groups => [
+                    ..._groups.filter(_group => _group !== index.tasks[0].taskId),
+                    index.tasks[0].taskId
+                  ])
+                }).catch(err => {
+                  console.error(err);
+                });
+            });
+        })
+        .catch(err => {
+          console.error(err);
+        });
+    });
+  }, []);
   useEffect(() => {
     groups.forEach(taskGroupId => {
       fetch(`https://firefox-ci-tc.services.mozilla.com/api/queue/v1/task-group/${taskGroupId}/list`)
@@ -83,11 +108,20 @@ function App() {
             };
           }, {})
     }));
-  }, [pools, tasks]);
+  }, [tasks]);
 
   return (
     <Container>
       <h1 className="text-center">are we green on azure yet?</h1>
+      {
+        (isLoading)
+          ? (
+              <div className="text-center">
+                <Spinner animation="border" size="lg" />
+              </div>
+            )
+          : null
+      }
       <h2 className="text-muted text-center">
         tl;dr
       </h2>
@@ -95,7 +129,7 @@ function App() {
         <tbody>
           {
             pools.sort().map(pool => (
-              <tr>
+              <tr key={pool}>
                 <td className="text-right" style={{width: '50%'}}>
                   <h6>
                     {pool.split('/')[1].replace('-azure', '')}
@@ -139,7 +173,7 @@ function App() {
             </th>
             {
               pools.sort().map(pool => (
-                <th className="text-muted text-center">
+                <th key={pool} className="text-muted text-center">
                   {pool.split('/')[1].replace('-azure', '')}
                 </th>
               ))
@@ -149,14 +183,14 @@ function App() {
         <tbody>
           {
             Object.keys(testSuiteResults).sort().map(suite => (
-              <tr>
+              <tr key={suite}>
                 <td className="text-right">{suite}</td>
                 {
                   pools.sort().map(pool => (
-                    <td className="text-center">
+                    <td key={pool} className="text-center">
                       {
                         testSuiteResults[suite][pool].sort((tA, tB) => (tA.resolved < tB.resolved) ? -1 : (tA.resolved > tB.resolved) ? 1 : 0).slice(-5).map(task => (
-                          <a href={`https://firefox-ci-tc.services.mozilla.com/tasks/${task.taskId}`} target="_blank" title={task.resolved}>
+                          <a key={task.taskId} href={`https://firefox-ci-tc.services.mozilla.com/tasks/${task.taskId}`} target="_blank" rel="noreferrer" title={task.resolved}>
                             <FontAwesomeIcon
                               style={{margin: '0 1px'}}
                               className={['pending', 'running'].includes(task.state) ? 'fa-sm fa-spin' : 'fa-sm'}
