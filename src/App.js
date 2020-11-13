@@ -127,7 +127,8 @@ function App() {
         </tbody>
       </Table>
       <p>
-        the code for this github page is hosted at: <a href="https://github.com/mozilla-platform-ops/are-we-green-on-azure-yet">github.com/mozilla-platform-ops/are-we-green-on-azure-yet</a>.
+        the code for this github page is hosted at: <a href="https://github.com/mozilla-platform-ops/are-we-green-on-azure-yet">github.com/mozilla-platform-ops/are-we-green-on-azure-yet</a>.<br />
+        the work to green up tests is tracked in: <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=1676850">bug 1676850</a>.<br />
       </p>
     </Container>
   );
