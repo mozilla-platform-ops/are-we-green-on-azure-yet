@@ -1,25 +1,25 @@
 {
   "files": {
     "main.css": "/are-we-green-on-azure-yet/static/css/main.6dea0f05.chunk.css",
-    "main.js": "/are-we-green-on-azure-yet/static/js/main.cb5995c9.chunk.js",
-    "main.js.map": "/are-we-green-on-azure-yet/static/js/main.cb5995c9.chunk.js.map",
-    "runtime-main.js": "/are-we-green-on-azure-yet/static/js/runtime-main.a2a72fc6.js",
-    "runtime-main.js.map": "/are-we-green-on-azure-yet/static/js/runtime-main.a2a72fc6.js.map",
+    "main.js": "/are-we-green-on-azure-yet/static/js/main.da0826fd.chunk.js",
+    "main.js.map": "/are-we-green-on-azure-yet/static/js/main.da0826fd.chunk.js.map",
+    "runtime-main.js": "/are-we-green-on-azure-yet/static/js/runtime-main.3bd1368d.js",
+    "runtime-main.js.map": "/are-we-green-on-azure-yet/static/js/runtime-main.3bd1368d.js.map",
     "static/css/2.109aacae.chunk.css": "/are-we-green-on-azure-yet/static/css/2.109aacae.chunk.css",
-    "static/js/2.ef41aa01.chunk.js": "/are-we-green-on-azure-yet/static/js/2.ef41aa01.chunk.js",
-    "static/js/2.ef41aa01.chunk.js.map": "/are-we-green-on-azure-yet/static/js/2.ef41aa01.chunk.js.map",
-    "static/js/3.47ac261a.chunk.js": "/are-we-green-on-azure-yet/static/js/3.47ac261a.chunk.js",
-    "static/js/3.47ac261a.chunk.js.map": "/are-we-green-on-azure-yet/static/js/3.47ac261a.chunk.js.map",
+    "static/js/2.5189d9fa.chunk.js": "/are-we-green-on-azure-yet/static/js/2.5189d9fa.chunk.js",
+    "static/js/2.5189d9fa.chunk.js.map": "/are-we-green-on-azure-yet/static/js/2.5189d9fa.chunk.js.map",
+    "static/js/3.735596c9.chunk.js": "/are-we-green-on-azure-yet/static/js/3.735596c9.chunk.js",
+    "static/js/3.735596c9.chunk.js.map": "/are-we-green-on-azure-yet/static/js/3.735596c9.chunk.js.map",
     "index.html": "/are-we-green-on-azure-yet/index.html",
     "static/css/2.109aacae.chunk.css.map": "/are-we-green-on-azure-yet/static/css/2.109aacae.chunk.css.map",
     "static/css/main.6dea0f05.chunk.css.map": "/are-we-green-on-azure-yet/static/css/main.6dea0f05.chunk.css.map",
-    "static/js/2.ef41aa01.chunk.js.LICENSE.txt": "/are-we-green-on-azure-yet/static/js/2.ef41aa01.chunk.js.LICENSE.txt"
+    "static/js/2.5189d9fa.chunk.js.LICENSE.txt": "/are-we-green-on-azure-yet/static/js/2.5189d9fa.chunk.js.LICENSE.txt"
   },
   "entrypoints": [
-    "static/js/runtime-main.a2a72fc6.js",
+    "static/js/runtime-main.3bd1368d.js",
     "static/css/2.109aacae.chunk.css",
-    "static/js/2.ef41aa01.chunk.js",
+    "static/js/2.5189d9fa.chunk.js",
     "static/css/main.6dea0f05.chunk.css",
-    "static/js/main.cb5995c9.chunk.js"
+    "static/js/main.da0826fd.chunk.js"
   ]
 }
