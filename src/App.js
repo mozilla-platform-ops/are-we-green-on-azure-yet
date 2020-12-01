@@ -27,6 +27,7 @@ const pools = [
   'gecko-t/win10-64-gpu-azure'
 ];
 const usualSuspects = [
+  'jmaher@mozilla.com',
   'mcornmesser@mozilla.com',
   'rthijssen@mozilla.com'
 ];
