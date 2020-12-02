@@ -42,7 +42,7 @@ function App() {
     'mcornmesser@mozilla.com',
     'rthijssen@mozilla.com'
   ]);
-  const [pushAgeInDays, setPushAgeInDays] = useState(14);
+  const [pushAgeInDays, setPushAgeInDays] = useState(7);
 
   useEffect(() => {
     if (!!usualSuspects && !!usualSuspects.length && !!pushAgeInDays) {
