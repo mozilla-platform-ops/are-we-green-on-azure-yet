@@ -1,10 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import Badge from 'react-bootstrap/Badge';
 import Button from 'react-bootstrap/Button';
+import Col from 'react-bootstrap/Col';
 import Container from 'react-bootstrap/Container';
+import Form from 'react-bootstrap/Form';
+import Row from 'react-bootstrap/Row';
 import Spinner from 'react-bootstrap/Spinner';
 import Table from 'react-bootstrap/Table';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import moment from 'moment';
 
 const icon = {
   completed: 'check-circle',
@@ -26,24 +30,31 @@ const pools = [
   'gecko-t/win10-64-azure',
   'gecko-t/win10-64-gpu-azure'
 ];
-const usualSuspects = [
-  'jmaher@mozilla.com',
-  'mcornmesser@mozilla.com',
-  'rthijssen@mozilla.com'
-];
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [groups, setGroups] = useState([]);
+  const [pushMap, setPushMap] = useState({});
   const [tasks, setTasks] = useState([]);
   const [testSuiteResults, setTestSuiteResults] = useState({});
+  const [usualSuspects, setUsualSuspects] = useState([
+    'jmaher@mozilla.com',
+    'mcornmesser@mozilla.com',
+    'rthijssen@mozilla.com'
+  ]);
+  const [pushAgeInDays, setPushAgeInDays] = useState(14);
+
   useEffect(() => {
-    if (!groups.length) {
+    if (!!usualSuspects && !!usualSuspects.length && !!pushAgeInDays) {
+      setGroups([]);
       usualSuspects.forEach(suspect => {
-        fetch(`https://hg.mozilla.org/try/json-pushes?full=1&startdate=2020-11-10&user=${suspect}`)
+        const startDate = moment().add((0 - pushAgeInDays), 'days').format('YYYY-MM-DD');
+        fetch(`https://hg.mozilla.org/try/json-pushes?full=1&startdate=${startDate}&user=${suspect}`)
           .then(response => response.json())
           .then(pushLog => {
-            Object.keys(pushLog)
+            const pushIds = Object.keys(pushLog);
+            console.log(`checking ${pushIds.length} pushes by ${suspect.split('@')[0]} since ${startDate}`);
+            pushIds
               .filter(pushId => pushLog[pushId].changesets[0].files[0] === 'try_task_config.json')
               .forEach(pushId => {
                 fetch(`https://firefox-ci-tc.services.mozilla.com/api/index/v1/tasks/gecko.v2.try.pushlog-id.${pushId}`)
@@ -52,10 +63,25 @@ function App() {
                     throw response;
                   })
                   .then(index => {
-                    setGroups(_groups => [
-                      ..._groups.filter(_group => _group !== index.tasks[0].taskId),
-                      index.tasks[0].taskId
-                    ])
+                    if (!!index.tasks && !!index.tasks.length) {
+                      const taskGroupId = index.tasks[0].taskId;
+                      // append the task group id to the list of task group ids (if not already present)
+                      setGroups(_groups => [
+                        ..._groups.filter(_group => _group !== taskGroupId),
+                        taskGroupId
+                      ]);
+                      // map task group id to push
+                      setPushMap(_pushMap => ({
+                        ..._pushMap,
+                        [taskGroupId]: {
+                          ...pushLog[pushId],
+                          pushId
+                        }
+                      }));
+                      console.log(`mapped task group: ${taskGroupId}, to push: ${pushId}, by: ${suspect.split('@')[0]}`);
+                    } else {
+                      console.log(`no tasks from push: ${pushId} by: ${suspect.split('@')[0]}`);
+                    }
                   }).catch(err => {
                     console.error(err);
                   });
@@ -66,8 +92,11 @@ function App() {
           });
       });
     }
-  }, [groups]);
+  }, [usualSuspects, pushAgeInDays]);
   useEffect(() => {
+    if (!!groups && !!groups.length) {
+      setTasks(_tasks => _tasks.filter(_task => groups.includes(_task.taskGroupId)));
+    }
     groups.forEach(taskGroupId => {
       fetch(`https://firefox-ci-tc.services.mozilla.com/api/queue/v1/task-group/${taskGroupId}/list`)
         .then(response => {
@@ -114,6 +143,10 @@ function App() {
           }, {})
     }));
   }, [tasks]);
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+  }
 
   return (
     <Container>
@@ -229,7 +262,7 @@ function App() {
                     <td key={pool} className="text-center">
                       {
                         testSuiteResults[suite][pool].sort((tA, tB) => (tA.resolved < tB.resolved) ? -1 : (tA.resolved > tB.resolved) ? 1 : 0).slice(-5).map(task => (
-                          <a key={task.taskId} href={`https://firefox-ci-tc.services.mozilla.com/tasks/${task.taskId}`} target="_blank" rel="noreferrer" title={task.resolved}>
+                          <a key={task.taskId} href={`https://firefox-ci-tc.services.mozilla.com/tasks/${task.taskId}`} target="_blank" rel="noreferrer" title={`${pushMap[task.taskGroupId].user.split('@')[0]} (try/${pushMap[task.taskGroupId].pushId}): pushed: ${moment(pushMap[task.taskGroupId].date * 1000).toISOString()} resolved: ${task.resolved}`}>
                             <FontAwesomeIcon
                               style={{margin: '0 1px'}}
                               className={['pending', 'running'].includes(task.state) ? 'fa-sm fa-spin' : 'fa-sm'}
@@ -246,12 +279,34 @@ function App() {
           }
         </tbody>
       </Table>
+      <Form onSubmit={handleSubmit}>
+        <Row>
+          <Col>
+            <Form.Group>
+              <Form.Label>include try pushes by</Form.Label>
+              <Form.Control
+                type="text"
+                value={usualSuspects.join(', ')}
+                onChange={e => { const { value } = e.target; setUsualSuspects(value.split(',').map(x => x.trim())); }} />
+            </Form.Group>
+          </Col>
+          <Col xs lg="2">
+            <Form.Group>
+              <Form.Label>push age in days</Form.Label>
+              <Form.Control
+                type="number"
+                value={pushAgeInDays}
+                onChange={e => { const _pushAgeInDays = parseInt(e.target.value); if (_pushAgeInDays > -1 && _pushAgeInDays < 31) { setPushAgeInDays(_pushAgeInDays); }; }} />
+            </Form.Group>
+          </Col>
+        </Row>
+      </Form>
       <ul>
         <li>
           status legend:
           {
             Object.keys(color).map(state => (
-              <div>
+              <div key={state}>
                 <FontAwesomeIcon
                   style={{margin: '0 1px'}}
                   className={['pending', 'running'].includes(state) ? 'fa-sm fa-spin' : 'fa-sm'}
@@ -270,7 +325,7 @@ function App() {
           task status indicators, in the detail table, are limited to the five most recent task runs for the test suite and platform.
         </li>
         <li className="text-muted">
-          the try push-log is used to find task groups containing tasks that are configured to run on azure worker types for pushes from a configured subset of users.
+          the try push-log is used to find task groups containing tasks that are configured to run on azure worker types for pushes in the last {pushAgeInDays} days, from a configured subset of users including: {usualSuspects.map(us => us.split('@')[0]).join(', ')}.
         </li>
         <li>
           the code for this github page is hosted at: <a href="https://github.com/mozilla-platform-ops/are-we-green-on-azure-yet">github.com/mozilla-platform-ops/are-we-green-on-azure-yet</a>.
