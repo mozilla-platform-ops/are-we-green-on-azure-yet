@@ -163,11 +163,12 @@ export default function App() {
     }
   }, [pushCount])
 
-  const tiers = [1, 2, 3]
+  const activeTiers = [...new Set(jobs.map(j => j.tier))].sort()
+  const showTierGroups = activeTiers.length > 1
   const platforms = [...new Set(jobs.map(j => j.platform))].sort()
 
   const jobsByTier = {}
-  for (const tier of tiers) {
+  for (const tier of activeTiers) {
     const tierJobs = jobs.filter(j => j.tier === tier)
     const suites = [...new Set(tierJobs.map(j => j.suite))].sort()
     jobsByTier[tier] = {}
@@ -234,7 +235,7 @@ export default function App() {
       <h2>tl;dr</h2>
       <table className="summary-table">
         <tbody>
-          {tiers.map(tier => {
+          {activeTiers.map(tier => {
             const summary = tierSummary(tier)
             if (!summary) return null
             const passed = summary.success || 0
@@ -243,7 +244,7 @@ export default function App() {
             const isGreen = passed > 0 && nonSuccess === 0
             return (
               <tr key={tier}>
-                <td className="tier-label">tier {tier}</td>
+                {showTierGroups && <td className="tier-label">tier {tier}</td>}
                 <td className="tier-status">
                   <strong style={{ color: isGreen ? '#2ea44f' : '#d73a49' }}>
                     {pct}%
@@ -264,15 +265,15 @@ export default function App() {
         </tbody>
       </table>
 
-      {!isLoading && jobs.length > 0 && tiers.some(t => tierFailures(t).length > 0) && (
+      {!isLoading && jobs.length > 0 && activeTiers.some(t => tierFailures(t).length > 0) && (
         <>
           <h2>what's failing</h2>
-          {tiers.map(tier => {
+          {activeTiers.map(tier => {
             const failures = tierFailures(tier)
             if (!failures.length) return null
             return (
               <div key={tier} className="failure-section">
-                <h3>tier {tier}</h3>
+                {showTierGroups && <h3>tier {tier}</h3>}
                 <table className="failure-table">
                   <thead>
                     <tr>
@@ -309,7 +310,7 @@ export default function App() {
         </>
       )}
 
-      {tiers.map(tier => {
+      {activeTiers.map(tier => {
         const tierSuites = Object.keys(jobsByTier[tier] || {})
         if (!tierSuites.length) return null
         const tierPlatforms = platforms.filter(plat =>
@@ -320,7 +321,7 @@ export default function App() {
         if (!tierPlatforms.length) return null
         return (
           <div key={tier}>
-            <h2>tier {tier}</h2>
+            <h2>{showTierGroups ? `tier ${tier}` : 'detail'}</h2>
             <table className="detail-table">
               <thead>
                 <tr>
