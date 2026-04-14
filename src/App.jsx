@@ -38,7 +38,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true)
   const [statusMsg, setStatusMsg] = useState('')
   const [jobs, setJobs] = useState([])
-  const [pushCount, setPushCount] = useState(5)
+  const [pushCount, setPushCount] = useState(20)
 
   useEffect(() => {
     let cancelled = false
@@ -293,7 +293,7 @@ export default function App() {
           value={pushCount}
           onChange={e => {
             const val = parseInt(e.target.value)
-            if (val > 0 && val <= 20) setPushCount(val)
+            if (val > 0 && val <= 50) setPushCount(val)
           }}
         />
       </div>
