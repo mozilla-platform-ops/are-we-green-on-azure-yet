@@ -7,14 +7,14 @@ test('renders page heading', () => {
   expect(heading).toBeInTheDocument();
 });
 
+test('renders autoland description', () => {
+  render(<App />);
+  const desc = screen.getByText(/windows test results from the last/i);
+  expect(desc).toBeInTheDocument();
+});
+
 test('renders tl;dr section', () => {
   render(<App />);
   const tldr = screen.getByRole('heading', { name: /tl;dr/i });
   expect(tldr).toBeInTheDocument();
-});
-
-test('renders detail section', () => {
-  render(<App />);
-  const detail = screen.getByRole('heading', { name: /^detail$/i });
-  expect(detail).toBeInTheDocument();
 });
