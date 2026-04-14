@@ -18,6 +18,11 @@ const RESULT_LABELS = [
   'retry', 'usercancel', 'superseded'
 ]
 
+// All Windows test platforms in Firefox CI run on Azure VMs.
+// Hardware perf pools (releng-hardware) use different Treeherder
+// platform names that don't start with "windows".
+const AZURE_PLATFORM_PREFIX = 'windows'
+
 function resultFromJob(job) {
   if (job.state !== 'completed') return job.state
   return job.result || 'unknown'
@@ -37,6 +42,7 @@ function timeAgo(timestamp) {
 export default function App() {
   const [isLoading, setIsLoading] = useState(true)
   const [statusMsg, setStatusMsg] = useState('')
+  const [hasErrors, setHasErrors] = useState(false)
   const [jobs, setJobs] = useState([])
   const [pushCount, setPushCount] = useState(20)
 
@@ -45,6 +51,7 @@ export default function App() {
     const controller = new AbortController()
 
     setJobs([])
+    setHasErrors(false)
     setIsLoading(true)
     setStatusMsg('fetching autoland pushes...')
 
@@ -60,11 +67,13 @@ export default function App() {
         if (cancelled) return
         setStatusMsg(`fetched ${fetchedPushes.length} pushes, loading jobs...`)
 
+        let failedPushes = 0
         const allJobs = await Promise.all(
           fetchedPushes.map(async (push) => {
             const pushJobs = []
             let page = 1
             let hasMore = true
+            let pushFailed = false
             while (hasMore && !cancelled) {
               try {
                 const res = await fetch(
@@ -72,12 +81,15 @@ export default function App() {
                   `?push_id=${push.id}&count=2000&page=${page}&state=completed`,
                   { signal: controller.signal }
                 )
-                if (!res.ok) break
+                if (!res.ok) {
+                  pushFailed = true
+                  break
+                }
                 const data = await res.json()
                 pushJobs.push(
                   ...data.results
                     .filter(j =>
-                      j.platform.startsWith('windows') &&
+                      j.platform.startsWith(AZURE_PLATFORM_PREFIX) &&
                       j.state === 'completed'
                     )
                     .map(j => ({
@@ -102,25 +114,40 @@ export default function App() {
                 console.error(
                   `jobs fetch failed for push ${push.id}:`, err
                 )
+                pushFailed = true
                 hasMore = false
               }
             }
+            if (pushFailed) failedPushes++
             return pushJobs
           })
         )
 
         if (cancelled) return
+
         const flatJobs = allJobs.flat()
+        const incomplete = failedPushes > 0
+        setHasErrors(incomplete)
         setJobs(flatJobs)
-        setStatusMsg(
-          flatJobs.length
-            ? `loaded ${flatJobs.length} windows jobs ` +
-              `from ${fetchedPushes.length} pushes`
-            : 'no windows jobs found in recent pushes'
-        )
+
+        if (!flatJobs.length) {
+          setStatusMsg('no azure windows jobs found in recent pushes')
+        } else if (incomplete) {
+          setStatusMsg(
+            `loaded ${flatJobs.length} azure windows jobs from ` +
+            `${fetchedPushes.length} pushes ` +
+            `(${failedPushes} push(es) had fetch errors — data may be incomplete)`
+          )
+        } else {
+          setStatusMsg(
+            `loaded ${flatJobs.length} azure windows jobs from ` +
+            `${fetchedPushes.length} pushes`
+          )
+        }
       } catch (err) {
         if (cancelled || err.name === 'AbortError') return
         console.error('fetchData failed:', err)
+        setHasErrors(true)
         setStatusMsg(`error: ${err.message}`)
       } finally {
         if (!cancelled) setIsLoading(false)
@@ -194,10 +221,14 @@ export default function App() {
     <>
       <h1>is the grass greener on the azure side?</h1>
       <p className="subtitle">
-        windows test results from the last {pushCount} autoland pushes
+        azure windows test results from the last {pushCount} autoland pushes
       </p>
       {isLoading && <div className="spinner" />}
-      {statusMsg && <p className="status-msg">{statusMsg}</p>}
+      {statusMsg && (
+        <p className={`status-msg${hasErrors ? ' status-error' : ''}`}>
+          {statusMsg}
+        </p>
+      )}
 
       <h2>tl;dr</h2>
       <table className="summary-table">
@@ -206,20 +237,23 @@ export default function App() {
             const summary = tierSummary(tier)
             if (!summary) return null
             const passed = summary.success || 0
-            const failed = (summary.testfailed || 0) + (summary.busted || 0)
-            const other = summary.total - passed - failed
+            const nonSuccess = summary.total - passed
             const pct = Math.round((passed / summary.total) * 100)
+            const isGreen = passed > 0 && nonSuccess === 0
             return (
               <tr key={tier}>
                 <td className="tier-label">tier {tier}</td>
                 <td className="tier-status">
-                  <strong style={{ color: failed === 0 ? '#2ea44f' : '#d73a49' }}>
+                  <strong style={{ color: isGreen ? '#2ea44f' : '#d73a49' }}>
                     {pct}%
                   </strong>
                 </td>
                 <td>
                   <span className="count-detail">
-                    {passed} passed{failed > 0 && <>, <span style={{ color: '#d73a49' }}>{failed} failed</span></>}{other > 0 && <>, {other} other</>}
+                    {passed} passed
+                    {nonSuccess > 0 && (
+                      <>, <span style={{ color: '#d73a49' }}>{nonSuccess} non-passing</span></>
+                    )}
                     {' '}/ {summary.total} total
                   </span>
                 </td>
@@ -365,7 +399,9 @@ export default function App() {
         <li>
           results are fetched via the{' '}
           <a href="https://treeherder.mozilla.org">treeherder</a> API,
-          filtered to windows platforms, and grouped by tier.
+          filtered to azure windows platforms (all Treeherder platforms
+          prefixed "{AZURE_PLATFORM_PREFIX}" run on Azure VMs), and
+          grouped by tier.
         </li>
         <li>
           status icons are limited to the five most recent completed

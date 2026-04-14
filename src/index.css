@@ -13,6 +13,7 @@ h2 { text-align: center; color: #888; margin: 1.5rem 0 0.5rem; font-size: 1.2rem
 
 .subtitle { text-align: center; color: #888; font-size: 0.9rem; margin-bottom: 0.5rem; }
 .status-msg { text-align: center; color: #999; font-size: 0.8rem; margin: 0.25rem 0; }
+.status-error { color: #d73a49; font-weight: 600; }
 
 .spinner {
   display: flex;
