@@ -1,60 +1,19 @@
 {
   "name": "are-we-green-on-azure-yet",
-  "version": "0.1.0",
   "private": true,
-  "dependencies": {
-    "@fortawesome/fontawesome-svg-core": "^6.7.2",
-    "@fortawesome/free-brands-svg-icons": "^6.7.2",
-    "@fortawesome/free-regular-svg-icons": "^6.7.2",
-    "@fortawesome/free-solid-svg-icons": "^6.7.2",
-    "@fortawesome/react-fontawesome": "^0.2.6",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^15.0.7",
-    "@testing-library/user-event": "^14.6.1",
-    "bootstrap": "^5.3.8",
-    "moment": "^2.30.1",
-    "react": "^18.3.1",
-    "react-bootstrap": "^2.10.10",
-    "react-dom": "^18.3.1",
-    "react-scripts": "5.0.1",
-    "web-vitals": "^4.2.4"
-  },
+  "version": "0.1.0",
+  "type": "module",
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -b gh-pages -d build"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-  },
-  "homepage": "https://mozilla-platform-ops.github.io/are-we-green-on-azure-yet",
   "devDependencies": {
-    "gh-pages": "^6.3.0"
-  },
-  "overrides": {
-    "nth-check": "^2.0.1",
-    "postcss": "^8.4.31",
-    "serialize-javascript": "^7.0.5",
-    "underscore": "^1.13.8",
-    "webpack-dev-server": "^4.15.2",
-    "@tootallnate/once": "^3.0.1"
+    "@vitejs/plugin-react": "^6.0.1",
+    "vite": "^8.0.8"
   }
 }
