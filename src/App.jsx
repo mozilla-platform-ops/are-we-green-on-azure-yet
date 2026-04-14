@@ -18,10 +18,11 @@ const RESULT_LABELS = [
   'retry', 'usercancel', 'superseded'
 ]
 
-// Azure Windows platforms in Treeherder: windows10-*, windows11-*
-// (test VMs) and windows2012-* (Server 2022 build workers).
-// Hardware perf pools use entirely different platform names.
-const AZURE_PLATFORM_RE = /^windows/
+// Azure test platforms in Treeherder start with "windows1" (e.g.
+// windows11-64-24h2, windows10-64-2009). Build platforms use
+// "windows2012-*" (Windows Server 2022 build workers) and hardware
+// perf pools use entirely different platform names.
+const AZURE_TEST_PLATFORM_RE = /^windows1/
 
 function resultFromJob(job) {
   if (job.state !== 'completed') return job.state
@@ -89,7 +90,7 @@ export default function App() {
                 pushJobs.push(
                   ...data.results
                     .filter(j =>
-                      AZURE_PLATFORM_RE.test(j.platform) &&
+                      AZURE_TEST_PLATFORM_RE.test(j.platform) &&
                       j.state === 'completed'
                     )
                     .map(j => ({
@@ -100,7 +101,7 @@ export default function App() {
                       pushAuthor: push.author,
                       name: j.job_type_name,
                       groupName: j.job_group_name,
-                      suite: j.job_group_name === 'unknown' ? j.job_type_name.split('/')[0] : j.job_group_name,
+                      suite: j.job_group_name,
                       platform: j.platform,
                       tier: j.tier,
                       result: resultFromJob(j),
@@ -399,8 +400,9 @@ export default function App() {
         <li>
           results are fetched via the{' '}
           <a href="https://treeherder.mozilla.org">treeherder</a> API,
-          filtered to azure windows platforms (tests and builds), and
-          grouped by tier.
+          filtered to azure test platforms (Treeherder platforms matching
+          windows10-* and windows11-*, excluding windows2012-* build
+          workers), and grouped by tier.
         </li>
         <li>
           status icons are limited to the five most recent completed
