@@ -44,6 +44,7 @@ const HG_BASE = 'https://hg-edge.mozilla.org/integration/autoland';
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
+  const [statusMsg, setStatusMsg] = useState('');
   const [pushMap, setPushMap] = useState({});
   const [tasks, setTasks] = useState([]);
   const [pushCount, setPushCount] = useState(5);
@@ -51,6 +52,7 @@ function App() {
   useEffect(() => {
     setTasks([]);
     setIsLoading(true);
+    setStatusMsg('fetching autoland pushes...');
 
     async function fetchData() {
       try {
@@ -68,7 +70,7 @@ function App() {
         );
         const pushData = await pushRes.json();
         const pushIds = Object.keys(pushData.pushes).sort((a, b) => b - a);
-        console.log(`fetched ${pushIds.length} autoland pushes (${pushIds[pushIds.length - 1]}..${pushIds[0]})`);
+        setStatusMsg(`fetched ${pushIds.length} pushes, resolving task groups...`);
 
         // resolve each push to a task group via the TC index
         const groupEntries = [];
@@ -96,11 +98,12 @@ function App() {
         );
 
         if (!groupEntries.length) {
-          console.log('no indexed task groups found');
+          setStatusMsg('no indexed task groups found for recent pushes');
           setIsLoading(false);
           return;
         }
 
+        setStatusMsg(`found ${groupEntries.length} task groups, fetching windows tasks...`);
         setPushMap(prev => ({ ...prev, ...foundPushMap }));
 
         // fetch all pages of each task group, filter to Windows pools
@@ -148,9 +151,15 @@ function App() {
           })
         );
 
-        setTasks(allTasks.flat());
+        const flatTasks = allTasks.flat();
+        setTasks(flatTasks);
+        setStatusMsg(flatTasks.length
+          ? `loaded ${flatTasks.length} windows tasks from ${groupEntries.length} pushes`
+          : `no windows tasks found in ${groupEntries.length} task groups`
+        );
       } catch (err) {
         console.error('fetchData failed:', err);
+        setStatusMsg(`error: ${err.message}`);
       } finally {
         setIsLoading(false);
       }
@@ -206,6 +215,11 @@ function App() {
         <div className="text-center">
           <Spinner animation="border" />
         </div>
+      )}
+      {statusMsg && (
+        <p className="text-muted text-center" style={{ fontSize: '0.85em' }}>
+          {statusMsg}
+        </p>
       )}
 
       <h2 className="text-muted text-center">tl;dr</h2>
