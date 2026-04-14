@@ -11,11 +11,11 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import moment from 'moment';
 
 const icon = {
-  completed: 'check-circle',
-  failed: 'times-circle',
-  exception: 'exclamation-circle',
+  completed: 'circle-check',
+  failed: 'circle-xmark',
+  exception: 'circle-exclamation',
   pending: 'spinner',
-  running: 'cog'
+  running: 'gear'
 };
 const color = {
   completed: 'green',
@@ -215,7 +215,7 @@ function App() {
                           icon={icon[state]}
                           color={color[state]} />
                         &nbsp;
-                        <Badge variant="secondary">
+                        <Badge bg="secondary">
                           {
                             Object.keys(testSuiteResults).map(suite => {
                               let poolSuitetasks = tasks

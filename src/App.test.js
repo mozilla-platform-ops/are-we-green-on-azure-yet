@@ -9,12 +9,12 @@ test('renders page heading', () => {
 
 test('renders tl;dr section', () => {
   render(<App />);
-  const tldr = screen.getByText(/tl;dr/i);
+  const tldr = screen.getByRole('heading', { name: /tl;dr/i });
   expect(tldr).toBeInTheDocument();
 });
 
 test('renders detail section', () => {
   render(<App />);
-  const detail = screen.getByText(/detail/i);
+  const detail = screen.getByRole('heading', { name: /^detail$/i });
   expect(detail).toBeInTheDocument();
 });
