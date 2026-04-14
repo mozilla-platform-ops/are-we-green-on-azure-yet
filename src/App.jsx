@@ -88,7 +88,7 @@ export default function App() {
                       pushAuthor: push.author,
                       name: j.job_type_name,
                       groupName: j.job_group_name,
-                      suite: j.job_group_symbol === '?' ? j.job_type_symbol : `${j.job_group_symbol}(${j.job_type_symbol})`,
+                      suite: j.job_group_name,
                       platform: j.platform,
                       tier: j.tier,
                       result: resultFromJob(j),
@@ -203,10 +203,10 @@ export default function App() {
       </table>
 
       {tiers.map(tier => {
-        const suites = Object.keys(jobsByTier[tier] || {})
-        if (!suites.length) return null
+        const tierSuites = Object.keys(jobsByTier[tier] || {})
+        if (!tierSuites.length) return null
         const tierPlatforms = platforms.filter(plat =>
-          suites.some(suite =>
+          tierSuites.some(suite =>
             (jobsByTier[tier][suite][plat] || []).length > 0
           )
         )
@@ -217,55 +217,47 @@ export default function App() {
             <table className="detail-table">
               <thead>
                 <tr>
-                  <th>suite</th>
-                  {tierPlatforms.map(plat => (
-                    <th key={plat}>{plat}</th>
+                  <th>platform</th>
+                  {tierSuites.map(suite => (
+                    <th key={suite}>{suite}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {suites.map(suite => {
-                  const hasJobs = tierPlatforms.some(
-                    plat =>
-                      (jobsByTier[tier][suite][plat] || []).length > 0
-                  )
-                  if (!hasJobs) return null
-                  const suiteName = jobsByTier[tier][suite][tierPlatforms.find(p => (jobsByTier[tier][suite][p] || []).length > 0)]?.[0]?.groupName || suite
-                  return (
-                    <tr key={suite}>
-                      <td title={suiteName}>{suite}</td>
-                      {tierPlatforms.map(plat => {
-                        const platJobs =
-                          jobsByTier[tier][suite][plat] || []
-                        return (
-                          <td key={plat}>
-                            {platJobs.slice(-5).map(job => (
-                              <a
-                                key={job.id}
-                                href={
-                                  `${TREEHERDER}/jobs?repo=autoland` +
-                                  `&revision=${job.pushRevision}` +
-                                  `&selectedTaskRun=${job.id}-0`
-                                }
-                                target="_blank"
-                                rel="noreferrer"
-                                title={
-                                  `${job.name}\n` +
-                                  `${job.pushAuthor?.split('@')[0] || '?'}` +
-                                  ` \u2014 ${timeAgo(job.pushTimestamp)}\n` +
-                                  `result: ${job.result}`
-                                }>
-                                <span className={
-                                  `dot ${RESULT_COLORS[job.result] || RESULT_COLORS.unknown}`
-                                } />
-                              </a>
-                            ))}
-                          </td>
-                        )
-                      })}
-                    </tr>
-                  )
-                })}
+                {tierPlatforms.map(plat => (
+                  <tr key={plat}>
+                    <td>{plat}</td>
+                    {tierSuites.map(suite => {
+                      const platJobs =
+                        jobsByTier[tier][suite]?.[plat] || []
+                      return (
+                        <td key={suite}>
+                          {platJobs.slice(-5).map(job => (
+                            <a
+                              key={job.id}
+                              href={
+                                `${TREEHERDER}/jobs?repo=autoland` +
+                                `&revision=${job.pushRevision}` +
+                                `&selectedTaskRun=${job.id}-0`
+                              }
+                              target="_blank"
+                              rel="noreferrer"
+                              title={
+                                `${job.name}\n` +
+                                `${job.pushAuthor?.split('@')[0] || '?'}` +
+                                ` \u2014 ${timeAgo(job.pushTimestamp)}\n` +
+                                `result: ${job.result}`
+                              }>
+                              <span className={
+                                `dot ${RESULT_COLORS[job.result] || RESULT_COLORS.unknown}`
+                              } />
+                            </a>
+                          ))}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
