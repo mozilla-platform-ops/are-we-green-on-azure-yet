@@ -11,151 +11,110 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import moment from 'moment';
 
 const statusIcon = {
-  completed: 'circle-check',
-  failed: 'circle-xmark',
+  success: 'circle-check',
+  testfailed: 'circle-xmark',
+  busted: 'circle-xmark',
   exception: 'circle-exclamation',
+  retry: 'rotate',
+  usercancel: 'ban',
+  superseded: 'forward',
   pending: 'spinner',
   running: 'gear',
-  unscheduled: 'clock'
+  unknown: 'circle-question'
 };
 const statusColor = {
-  completed: 'green',
-  failed: 'red',
+  success: 'green',
+  testfailed: 'red',
+  busted: 'darkred',
   exception: 'orange',
+  retry: 'goldenrod',
+  usercancel: 'gray',
+  superseded: 'gray',
   pending: 'gray',
   running: 'darkgray',
-  unscheduled: 'lightgray'
+  unknown: 'lightgray'
 };
 
-const WINDOWS_POOLS = [
-  'gecko-t/win11-64-25h2',
-  'gecko-t/win11-64-25h2-gpu',
-  'gecko-t/win11-64-25h2-source',
-  'gecko-t/win11-64-24h2',
-  'gecko-t/win11-64-24h2-gpu',
-  'gecko-t/win11-64-24h2-source',
-  'gecko-t/win10-64-2009',
-  'gecko-t/win10-64-2009-gpu',
-  'gecko-t/win10-64-2009-source'
-];
+const TREEHERDER = 'https://treeherder.mozilla.org';
 
-const TC_BASE = 'https://firefox-ci-tc.services.mozilla.com';
-const HG_BASE = 'https://hg-edge.mozilla.org/integration/autoland';
+function resultFromJob(job) {
+  if (job.state === 'pending') return 'pending';
+  if (job.state === 'running') return 'running';
+  return job.result || 'unknown';
+}
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [statusMsg, setStatusMsg] = useState('');
-  const [pushMap, setPushMap] = useState({});
-  const [tasks, setTasks] = useState([]);
+  const [jobs, setJobs] = useState([]);
+  const [pushes, setPushes] = useState([]);
   const [pushCount, setPushCount] = useState(5);
 
   useEffect(() => {
-    setTasks([]);
+    setJobs([]);
+    setPushes([]);
     setIsLoading(true);
     setStatusMsg('fetching autoland pushes...');
 
     async function fetchData() {
       try {
-        // get the latest push ID from autoland
-        const tipRes = await fetch(
-          `${HG_BASE}/json-pushes?version=2&topo=1&startID=0&endID=1`
-        );
-        const tipData = await tipRes.json();
-        const lastPushId = tipData.lastpushid;
-
-        // fetch the last N pushes
-        const startID = Math.max(0, lastPushId - pushCount);
+        // get recent pushes
         const pushRes = await fetch(
-          `${HG_BASE}/json-pushes?version=2&topo=1&startID=${startID}&endID=${lastPushId}`
+          `${TREEHERDER}/api/project/autoland/push/?count=${pushCount}`
         );
+        if (!pushRes.ok) throw new Error(`push API returned ${pushRes.status}`);
         const pushData = await pushRes.json();
-        const pushIds = Object.keys(pushData.pushes).sort((a, b) => b - a);
-        setStatusMsg(`fetched ${pushIds.length} pushes, resolving task groups...`);
+        const fetchedPushes = pushData.results;
+        setPushes(fetchedPushes);
+        setStatusMsg(`fetched ${fetchedPushes.length} pushes, loading jobs...`);
 
-        // resolve each push to a task group via the TC index
-        const groupEntries = [];
-        const foundPushMap = {};
-        await Promise.all(
-          pushIds.map(async (pushId) => {
-            try {
-              const res = await fetch(
-                `${TC_BASE}/api/index/v1/tasks/gecko.v2.autoland.pushlog-id.${pushId}`
-              );
-              if (!res.ok) return;
-              const index = await res.json();
-              if (index.tasks && index.tasks.length) {
-                const taskGroupId = index.tasks[0].taskId;
-                groupEntries.push(taskGroupId);
-                foundPushMap[taskGroupId] = {
-                  ...pushData.pushes[pushId],
-                  pushId
-                };
-              }
-            } catch (err) {
-              console.error(`index lookup failed for push ${pushId}:`, err);
-            }
-          })
-        );
-
-        if (!groupEntries.length) {
-          setStatusMsg('no indexed task groups found for recent pushes');
-          setIsLoading(false);
-          return;
-        }
-
-        setStatusMsg(`found ${groupEntries.length} task groups, fetching windows tasks...`);
-        setPushMap(prev => ({ ...prev, ...foundPushMap }));
-
-        // fetch all pages of each task group, filter to Windows pools
-        const allTasks = await Promise.all(
-          groupEntries.map(async (taskGroupId) => {
-            const groupTasks = [];
-            let continuationToken = null;
-            try {
-              do {
-                const url = new URL(
-                  `${TC_BASE}/api/queue/v1/task-group/${taskGroupId}/list`
+        // fetch jobs for each push in parallel
+        const allJobs = await Promise.all(
+          fetchedPushes.map(async (push) => {
+            const pushJobs = [];
+            let page = 1;
+            let hasMore = true;
+            while (hasMore) {
+              try {
+                const res = await fetch(
+                  `${TREEHERDER}/api/project/autoland/jobs/?push_id=${push.id}&count=2000&page=${page}`
                 );
-                if (continuationToken) {
-                  url.searchParams.set('continuationToken', continuationToken);
-                }
-                const res = await fetch(url);
                 if (!res.ok) break;
                 const data = await res.json();
-                groupTasks.push(
-                  ...data.tasks
-                    .filter(t =>
-                      WINDOWS_POOLS.includes(
-                        `${t.task.provisionerId}/${t.task.workerType}`
-                      )
-                    )
-                    .map(t => ({
-                      taskId: t.status.taskId,
-                      taskGroupId: t.task.taskGroupId,
-                      name: t.task.metadata.name,
-                      suite: t.task.metadata.name.split('/')[1] || t.task.metadata.name,
-                      pool: `${t.task.provisionerId}/${t.task.workerType}`,
-                      tier: (t.task.extra && t.task.extra.treeherder && t.task.extra.treeherder.tier) || 1,
-                      state: t.status.state,
-                      resolved: (t.status.runs && t.status.runs.length)
-                        ? t.status.runs.slice(-1)[0].resolved
-                        : undefined
-                    }))
-                );
-                continuationToken = data.continuationToken || null;
-              } while (continuationToken);
-            } catch (err) {
-              console.error(`failed to fetch task group ${taskGroupId}:`, err);
+                const windowsJobs = data.results
+                  .filter(j => j.platform.startsWith('windows'))
+                  .map(j => ({
+                    id: j.id,
+                    pushId: push.id,
+                    pushRevision: push.revision,
+                    pushTimestamp: push.push_timestamp,
+                    pushAuthor: push.author,
+                    name: j.job_type_name,
+                    suite: j.job_group_name,
+                    symbol: j.job_type_symbol,
+                    platform: j.platform,
+                    tier: j.tier,
+                    result: resultFromJob(j),
+                    state: j.state,
+                    endTimestamp: j.end_timestamp
+                  }));
+                pushJobs.push(...windowsJobs);
+                hasMore = data.results.length === 2000;
+                page++;
+              } catch (err) {
+                console.error(`failed to fetch jobs for push ${push.id} page ${page}:`, err);
+                hasMore = false;
+              }
             }
-            return groupTasks;
+            return pushJobs;
           })
         );
 
-        const flatTasks = allTasks.flat();
-        setTasks(flatTasks);
-        setStatusMsg(flatTasks.length
-          ? `loaded ${flatTasks.length} windows tasks from ${groupEntries.length} pushes`
-          : `no windows tasks found in ${groupEntries.length} task groups`
+        const flatJobs = allJobs.flat();
+        setJobs(flatJobs);
+        setStatusMsg(flatJobs.length
+          ? `loaded ${flatJobs.length} windows jobs from ${fetchedPushes.length} pushes`
+          : 'no windows jobs found in recent pushes'
         );
       } catch (err) {
         console.error('fetchData failed:', err);
@@ -170,40 +129,32 @@ function App() {
 
   const tiers = [1, 2, 3];
 
-  // group tasks: tier → suite → pool → tasks[]
-  const tasksByTier = {};
+  // group jobs: tier → suite → platform → jobs[]
+  const platforms = [...new Set(jobs.map(j => j.platform))].sort();
+  const jobsByTier = {};
   for (const tier of tiers) {
-    const tierTasks = tasks.filter(t => t.tier === tier);
-    const suites = [...new Set(tierTasks.map(t => t.suite))].sort();
-    tasksByTier[tier] = {};
+    const tierJobs = jobs.filter(j => j.tier === tier);
+    const suites = [...new Set(tierJobs.map(j => j.suite))].sort();
+    jobsByTier[tier] = {};
     for (const suite of suites) {
-      tasksByTier[tier][suite] = {};
-      for (const pool of WINDOWS_POOLS) {
-        tasksByTier[tier][suite][pool] = tierTasks
-          .filter(t => t.suite === suite && t.pool === pool)
-          .sort((a, b) => (a.resolved || '') < (b.resolved || '') ? -1 : 1);
+      jobsByTier[tier][suite] = {};
+      for (const plat of platforms) {
+        jobsByTier[tier][suite][plat] = tierJobs
+          .filter(j => j.suite === suite && j.platform === plat)
+          .sort((a, b) => (a.endTimestamp || 0) - (b.endTimestamp || 0));
       }
     }
   }
 
   function tierSummary(tier) {
-    const tierTasks = tasks.filter(t => t.tier === tier);
-    if (!tierTasks.length) return { total: 0, completed: 0, failed: 0, running: 0, pending: 0 };
-    return {
-      total: tierTasks.length,
-      completed: tierTasks.filter(t => t.state === 'completed').length,
-      failed: tierTasks.filter(t => t.state === 'failed').length,
-      exception: tierTasks.filter(t => t.state === 'exception').length,
-      running: tierTasks.filter(t => t.state === 'running').length,
-      pending: tierTasks.filter(t => t.state === 'pending').length,
-      unscheduled: tierTasks.filter(t => t.state === 'unscheduled').length,
-    };
+    const tierJobs = jobs.filter(j => j.tier === tier);
+    if (!tierJobs.length) return { total: 0 };
+    const counts = {};
+    for (const j of tierJobs) {
+      counts[j.result] = (counts[j.result] || 0) + 1;
+    }
+    return { total: tierJobs.length, ...counts };
   }
-
-  // unique pools that actually have tasks
-  const activePools = WINDOWS_POOLS.filter(pool =>
-    tasks.some(t => t.pool === pool)
-  );
 
   return (
     <Container>
@@ -228,7 +179,8 @@ function App() {
           {tiers.map(tier => {
             const summary = tierSummary(tier);
             if (!summary.total) return null;
-            const isGreen = summary.failed === 0 && summary.exception === 0;
+            const failures = (summary.testfailed || 0) + (summary.busted || 0) + (summary.exception || 0);
+            const isGreen = failures === 0;
             return (
               <tr key={tier}>
                 <td className="text-end" style={{ width: '30%' }}>
@@ -240,19 +192,19 @@ function App() {
                   </h6>
                 </td>
                 <td>
-                  {Object.keys(statusColor).map(state => {
-                    const count = summary[state] || 0;
+                  {Object.keys(statusColor).map(result => {
+                    const count = summary[result] || 0;
                     if (!count) return null;
                     return (
                       <Button
-                        key={state}
+                        key={result}
                         style={{ marginLeft: '0.3em' }}
                         variant="outline-secondary"
                         size="sm">
                         <FontAwesomeIcon
-                          className={['pending', 'running'].includes(state) ? 'fa-sm fa-spin' : 'fa-sm'}
-                          icon={statusIcon[state]}
-                          color={statusColor[state]} />
+                          className={['pending', 'running'].includes(result) ? 'fa-sm fa-spin' : 'fa-sm'}
+                          icon={statusIcon[result]}
+                          color={statusColor[result]} />
                         &nbsp;
                         <Badge bg="secondary">{count}</Badge>
                       </Button>
@@ -266,8 +218,12 @@ function App() {
       </Table>
 
       {tiers.map(tier => {
-        const suites = Object.keys(tasksByTier[tier] || {});
+        const suites = Object.keys(jobsByTier[tier] || {});
         if (!suites.length) return null;
+        const tierPlatforms = platforms.filter(plat =>
+          suites.some(suite => (jobsByTier[tier][suite][plat] || []).length > 0)
+        );
+        if (!tierPlatforms.length) return null;
         return (
           <div key={tier}>
             <h2 className="text-muted text-center">tier {tier}</h2>
@@ -275,38 +231,38 @@ function App() {
               <thead>
                 <tr>
                   <th className="text-muted text-end">suite</th>
-                  {activePools.map(pool => (
-                    <th key={pool} className="text-muted text-center" style={{ fontSize: '0.75em' }}>
-                      {pool.split('/')[1]}
+                  {tierPlatforms.map(plat => (
+                    <th key={plat} className="text-muted text-center" style={{ fontSize: '0.75em' }}>
+                      {plat}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {suites.map(suite => {
-                  const hasAnyTasks = activePools.some(
-                    pool => (tasksByTier[tier][suite][pool] || []).length > 0
+                  const hasJobs = tierPlatforms.some(
+                    plat => (jobsByTier[tier][suite][plat] || []).length > 0
                   );
-                  if (!hasAnyTasks) return null;
+                  if (!hasJobs) return null;
                   return (
                     <tr key={suite}>
                       <td className="text-end" style={{ fontSize: '0.85em' }}>{suite}</td>
-                      {activePools.map(pool => {
-                        const poolTasks = tasksByTier[tier][suite][pool] || [];
+                      {tierPlatforms.map(plat => {
+                        const platJobs = jobsByTier[tier][suite][plat] || [];
                         return (
-                          <td key={pool} className="text-center">
-                            {poolTasks.slice(-5).map(task => (
+                          <td key={plat} className="text-center">
+                            {platJobs.slice(-5).map(job => (
                               <a
-                                key={task.taskId}
-                                href={`${TC_BASE}/tasks/${task.taskId}`}
+                                key={job.id}
+                                href={`${TREEHERDER}/jobs?repo=autoland&revision=${job.pushRevision}&selectedTaskRun=${job.id}-0`}
                                 target="_blank"
                                 rel="noreferrer"
-                                title={`${pushMap[task.taskGroupId]?.user?.split('@')[0] || '?'} (push ${pushMap[task.taskGroupId]?.pushId || '?'})\npushed: ${pushMap[task.taskGroupId] ? moment(pushMap[task.taskGroupId].date * 1000).toISOString() : '?'}\nresolved: ${task.resolved || 'pending'}`}>
+                                title={`${job.name}\n${job.pushAuthor?.split('@')[0] || '?'}\npushed: ${moment(job.pushTimestamp * 1000).fromNow()}\nresult: ${job.result}`}>
                                 <FontAwesomeIcon
                                   style={{ margin: '0 1px' }}
-                                  className={['pending', 'running'].includes(task.state) ? 'fa-sm fa-spin' : 'fa-sm'}
-                                  icon={statusIcon[task.state] || 'circle-question'}
-                                  color={statusColor[task.state] || 'gray'} />
+                                  className={['pending', 'running'].includes(job.result) ? 'fa-sm fa-spin' : 'fa-sm'}
+                                  icon={statusIcon[job.result] || statusIcon.unknown}
+                                  color={statusColor[job.result] || statusColor.unknown} />
                               </a>
                             ))}
                           </td>
@@ -340,22 +296,22 @@ function App() {
       <ul>
         <li>
           status legend:
-          {Object.keys(statusColor).map(state => (
-            <div key={state}>
+          {Object.entries(statusColor).map(([result, color]) => (
+            <div key={result}>
               <FontAwesomeIcon
                 style={{ margin: '0 1px' }}
-                className={['pending', 'running'].includes(state) ? 'fa-sm fa-spin' : 'fa-sm'}
-                icon={statusIcon[state]}
-                color={statusColor[state]} />
-              &nbsp;{state}
+                className={['pending', 'running'].includes(result) ? 'fa-sm fa-spin' : 'fa-sm'}
+                icon={statusIcon[result]}
+                color={color} />
+              &nbsp;{result}
             </div>
           ))}
         </li>
         <li className="text-muted">
-          results are fetched from the last {pushCount} autoland pushes, filtered to windows azure worker pools, and grouped by treeherder tier.
+          results are fetched from the last {pushCount} autoland pushes via the treeherder API, filtered to windows platforms, and grouped by tier.
         </li>
         <li className="text-muted">
-          task status icons in the detail tables are limited to the five most recent runs per suite and pool.
+          task status icons in the detail tables are limited to the five most recent runs per suite and platform.
         </li>
         <li>
           the code for this github page is hosted at: <a href="https://github.com/mozilla-platform-ops/are-we-green-on-azure-yet">github.com/mozilla-platform-ops/are-we-green-on-azure-yet</a>.
