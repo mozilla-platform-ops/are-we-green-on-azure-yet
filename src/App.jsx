@@ -18,10 +18,11 @@ const RESULT_LABELS = [
   'retry', 'usercancel', 'superseded'
 ]
 
-// All Windows test platforms in Firefox CI run on Azure VMs.
-// Hardware perf pools (releng-hardware) use different Treeherder
-// platform names that don't start with "windows".
-const AZURE_PLATFORM_PREFIX = 'windows'
+// Azure test platforms in Treeherder start with "windows1" (e.g.
+// windows11-64-24h2, windows10-64-2009). Build platforms use
+// "windows2012-*" (Windows Server 2022 build workers) and hardware
+// perf pools use entirely different platform names.
+const AZURE_TEST_PLATFORM_RE = /^windows1/
 
 function resultFromJob(job) {
   if (job.state !== 'completed') return job.state
@@ -89,7 +90,7 @@ export default function App() {
                 pushJobs.push(
                   ...data.results
                     .filter(j =>
-                      j.platform.startsWith(AZURE_PLATFORM_PREFIX) &&
+                      AZURE_TEST_PLATFORM_RE.test(j.platform) &&
                       j.state === 'completed'
                     )
                     .map(j => ({
@@ -399,9 +400,9 @@ export default function App() {
         <li>
           results are fetched via the{' '}
           <a href="https://treeherder.mozilla.org">treeherder</a> API,
-          filtered to azure windows platforms (all Treeherder platforms
-          prefixed "{AZURE_PLATFORM_PREFIX}" run on Azure VMs), and
-          grouped by tier.
+          filtered to azure test platforms (Treeherder platforms matching
+          windows10-* and windows11-*, excluding windows2012-* build
+          workers), and grouped by tier.
         </li>
         <li>
           status icons are limited to the five most recent completed
