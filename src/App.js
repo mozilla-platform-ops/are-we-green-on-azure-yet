@@ -25,10 +25,15 @@ const color = {
   running: 'darkgray'
 };
 const pools = [
-  'gecko-t/win7-32-azure',
-  'gecko-t/win7-32-gpu-azure',
-  'gecko-t/win10-64-azure',
-  'gecko-t/win10-64-gpu-azure'
+  'gecko-t/win11-64-25h2',
+  'gecko-t/win11-64-25h2-gpu',
+  'gecko-t/win11-64-25h2-source',
+  'gecko-t/win11-64-24h2',
+  'gecko-t/win11-64-24h2-gpu',
+  'gecko-t/win11-64-24h2-source',
+  'gecko-t/win10-64-2009',
+  'gecko-t/win10-64-2009-gpu',
+  'gecko-t/win10-64-2009-source'
 ];
 
 function App() {
@@ -38,9 +43,8 @@ function App() {
   const [tasks, setTasks] = useState([]);
   const [testSuiteResults, setTestSuiteResults] = useState({});
   const [usualSuspects, setUsualSuspects] = useState([
-    'jmaher@mozilla.com',
-    'mcornmesser@mozilla.com',
-    'rthijssen@mozilla.com'
+    'jmoss@mozilla.com',
+    'mcornmesser@mozilla.com'
   ]);
   const [pushAgeInDays, setPushAgeInDays] = useState(7);
 
@@ -170,7 +174,7 @@ function App() {
               <tr>
                 <td className="text-right" style={{width: '50%'}}>
                   <h6>
-                    {pool.split('/')[1].replace('-azure', '')}
+                    {pool.split('/')[1]}
                   </h6>
                 </td>
                 <td style={{width: '50%'}}>
@@ -246,7 +250,7 @@ function App() {
             {
               pools.sort().map(pool => (
                 <th key={pool} className="text-muted text-center">
-                  {pool.split('/')[1].replace('-azure', '')}
+                  {pool.split('/')[1]}
                 </th>
               ))
             }
