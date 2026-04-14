@@ -47,7 +47,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [statusMsg, setStatusMsg] = useState('');
   const [jobs, setJobs] = useState([]);
-  const [pushCount, setPushCount] = useState(5);
+  const [pushCount, setPushCount] = useState(10);
 
   useEffect(() => {
     setJobs([]);
@@ -79,7 +79,7 @@ function App() {
                 if (!res.ok) break;
                 const data = await res.json();
                 const windowsJobs = data.results
-                  .filter(j => j.platform.startsWith('windows'))
+                  .filter(j => j.platform.startsWith('windows') && j.state === 'completed')
                   .map(j => ({
                     id: j.id,
                     pushId: push.id,
