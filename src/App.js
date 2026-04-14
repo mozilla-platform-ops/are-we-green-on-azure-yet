@@ -47,58 +47,64 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [statusMsg, setStatusMsg] = useState('');
   const [jobs, setJobs] = useState([]);
-  const [pushCount, setPushCount] = useState(10);
+  const [pushCount, setPushCount] = useState(5);
 
   useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+
     setJobs([]);
     setIsLoading(true);
     setStatusMsg('fetching autoland pushes...');
 
     async function fetchData() {
       try {
-        // get recent pushes
         const pushRes = await fetch(
-          `${TREEHERDER}/api/project/autoland/push/?count=${pushCount}`
+          `${TREEHERDER}/api/project/autoland/push/?count=${pushCount}`,
+          { signal: controller.signal }
         );
         if (!pushRes.ok) throw new Error(`push API returned ${pushRes.status}`);
         const pushData = await pushRes.json();
         const fetchedPushes = pushData.results;
+        if (cancelled) return;
         setStatusMsg(`fetched ${fetchedPushes.length} pushes, loading jobs...`);
 
-        // fetch jobs for each push in parallel
         const allJobs = await Promise.all(
           fetchedPushes.map(async (push) => {
             const pushJobs = [];
             let page = 1;
             let hasMore = true;
-            while (hasMore) {
+            while (hasMore && !cancelled) {
               try {
                 const res = await fetch(
-                  `${TREEHERDER}/api/project/autoland/jobs/?push_id=${push.id}&count=2000&page=${page}`
+                  `${TREEHERDER}/api/project/autoland/jobs/?push_id=${push.id}&count=2000&page=${page}`,
+                  { signal: controller.signal }
                 );
                 if (!res.ok) break;
                 const data = await res.json();
-                const windowsJobs = data.results
-                  .filter(j => j.platform.startsWith('windows') && j.state === 'completed')
-                  .map(j => ({
-                    id: j.id,
-                    pushId: push.id,
-                    pushRevision: push.revision,
-                    pushTimestamp: push.push_timestamp,
-                    pushAuthor: push.author,
-                    name: j.job_type_name,
-                    suite: j.job_group_name,
-                    symbol: j.job_type_symbol,
-                    platform: j.platform,
-                    tier: j.tier,
-                    result: resultFromJob(j),
-                    state: j.state,
-                    endTimestamp: j.end_timestamp
-                  }));
-                pushJobs.push(...windowsJobs);
+                pushJobs.push(
+                  ...data.results
+                    .filter(j => j.platform.startsWith('windows') && j.state === 'completed')
+                    .map(j => ({
+                      id: j.id,
+                      pushId: push.id,
+                      pushRevision: push.revision,
+                      pushTimestamp: push.push_timestamp,
+                      pushAuthor: push.author,
+                      name: j.job_type_name,
+                      suite: j.job_group_name,
+                      symbol: j.job_type_symbol,
+                      platform: j.platform,
+                      tier: j.tier,
+                      result: resultFromJob(j),
+                      state: j.state,
+                      endTimestamp: j.end_timestamp
+                    }))
+                );
                 hasMore = data.results.length === 2000;
                 page++;
               } catch (err) {
+                if (err.name === 'AbortError') return pushJobs;
                 console.error(`failed to fetch jobs for push ${push.id} page ${page}:`, err);
                 hasMore = false;
               }
@@ -107,6 +113,7 @@ function App() {
           })
         );
 
+        if (cancelled) return;
         const flatJobs = allJobs.flat();
         setJobs(flatJobs);
         setStatusMsg(flatJobs.length
@@ -114,14 +121,20 @@ function App() {
           : 'no windows jobs found in recent pushes'
         );
       } catch (err) {
+        if (cancelled || err.name === 'AbortError') return;
         console.error('fetchData failed:', err);
         setStatusMsg(`error: ${err.message}`);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     }
 
     fetchData();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
   }, [pushCount]);
 
   const tiers = [1, 2, 3];
