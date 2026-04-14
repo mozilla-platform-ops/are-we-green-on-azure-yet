@@ -69,7 +69,7 @@ export default function App() {
               try {
                 const res = await fetch(
                   `${TREEHERDER}/api/project/autoland/jobs/` +
-                  `?push_id=${push.id}&count=2000&page=${page}`,
+                  `?push_id=${push.id}&count=2000&page=${page}&state=completed`,
                   { signal: controller.signal }
                 )
                 if (!res.ok) break
