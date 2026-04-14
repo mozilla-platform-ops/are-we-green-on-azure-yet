@@ -163,6 +163,33 @@ export default function App() {
     return { total: tierJobs.length, ...counts }
   }
 
+  function tierFailures(tier) {
+    const failed = jobs.filter(
+      j => j.tier === tier &&
+        (j.result === 'testfailed' || j.result === 'busted')
+    )
+    if (!failed.length) return []
+    const grouped = {}
+    for (const j of failed) {
+      const key = `${j.suite}\t${j.platform}`
+      if (!grouped[key]) {
+        grouped[key] = {
+          suite: j.suite,
+          platform: j.platform,
+          count: 0,
+          busted: 0,
+          latest: j
+        }
+      }
+      grouped[key].count++
+      if (j.result === 'busted') grouped[key].busted++
+      if (j.endTimestamp > grouped[key].latest.endTimestamp) {
+        grouped[key].latest = j
+      }
+    }
+    return Object.values(grouped).sort((a, b) => b.count - a.count)
+  }
+
   return (
     <>
       <h1>is the grass greener on the azure side?</h1>
@@ -201,6 +228,51 @@ export default function App() {
           })}
         </tbody>
       </table>
+
+      {!isLoading && jobs.length > 0 && tiers.some(t => tierFailures(t).length > 0) && (
+        <>
+          <h2>what's failing</h2>
+          {tiers.map(tier => {
+            const failures = tierFailures(tier)
+            if (!failures.length) return null
+            return (
+              <div key={tier} className="failure-section">
+                <h3>tier {tier}</h3>
+                <table className="failure-table">
+                  <thead>
+                    <tr>
+                      <th>suite</th>
+                      <th>platform</th>
+                      <th>failures</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {failures.map(f => (
+                      <tr key={`${f.suite}-${f.platform}`}>
+                        <td>{f.suite}</td>
+                        <td>{f.platform}</td>
+                        <td>
+                          <a
+                            href={
+                              `${TREEHERDER}/jobs?repo=autoland` +
+                              `&revision=${f.latest.pushRevision}` +
+                              `&selectedTaskRun=${f.latest.id}-0`
+                            }
+                            target="_blank"
+                            rel="noreferrer"
+                            className="failure-count">
+                            {f.count}{f.busted > 0 && ` (${f.busted} busted)`}
+                          </a>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          })}
+        </>
+      )}
 
       {tiers.map(tier => {
         const tierSuites = Object.keys(jobsByTier[tier] || {})

@@ -48,6 +48,15 @@ h2 { text-align: center; color: #888; margin: 1.5rem 0 0.5rem; font-size: 1.2rem
   color: #555;
 }
 
+/* failure summary */
+.failure-section h3 { font-size: 0.9rem; color: #666; margin: 0.75rem 0 0.25rem; }
+.failure-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-bottom: 1rem; }
+.failure-table th { padding: 0.3rem 0.5rem; color: #888; font-weight: 500; border-bottom: 1px solid #eee; text-align: left; }
+.failure-table td { padding: 0.3rem 0.5rem; border-bottom: 1px solid #f5f5f5; }
+.failure-table tbody tr:nth-child(even) { background: #fafafa; }
+.failure-count { color: #d73a49; font-weight: 600; text-decoration: none; }
+.failure-count:hover { text-decoration: underline; }
+
 /* detail tables */
 .detail-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-bottom: 2rem; }
 .detail-table th { padding: 0.3rem 0.5rem; color: #888; font-weight: 500; border-bottom: 1px solid #eee; }
