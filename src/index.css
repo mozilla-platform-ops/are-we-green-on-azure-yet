@@ -34,8 +34,8 @@ h2 { text-align: center; color: #888; margin: 1.5rem 0 0.5rem; font-size: 1.2rem
 .summary-table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
 .summary-table td { padding: 0.4rem 0.75rem; }
 .summary-table .tier-label { text-align: right; font-weight: 600; width: 30%; }
-.summary-table .tier-status { width: 15%; }
-.summary-table .tier-counts { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.summary-table .tier-status { width: 10%; font-size: 1.1rem; }
+.count-detail { font-size: 0.85rem; color: #555; }
 
 .count-badge {
   display: inline-flex;

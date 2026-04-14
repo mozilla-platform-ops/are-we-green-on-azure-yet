@@ -87,8 +87,8 @@ export default function App() {
                       pushTimestamp: push.push_timestamp,
                       pushAuthor: push.author,
                       name: j.job_type_name,
-                      suite: j.job_group_name,
-                      symbol: j.job_type_symbol,
+                      groupName: j.job_group_name,
+                      suite: j.job_group_symbol === '?' ? j.job_type_symbol : `${j.job_group_symbol}(${j.job_type_symbol})`,
                       platform: j.platform,
                       tier: j.tier,
                       result: resultFromJob(j),
@@ -178,35 +178,23 @@ export default function App() {
           {tiers.map(tier => {
             const summary = tierSummary(tier)
             if (!summary) return null
-            const failures =
-              (summary.testfailed || 0) +
-              (summary.busted || 0) +
-              (summary.exception || 0)
+            const passed = summary.success || 0
+            const failed = (summary.testfailed || 0) + (summary.busted || 0)
+            const other = summary.total - passed - failed
+            const pct = Math.round((passed / summary.total) * 100)
             return (
               <tr key={tier}>
                 <td className="tier-label">tier {tier}</td>
                 <td className="tier-status">
-                  <strong style={{
-                    color: failures === 0 ? '#2ea44f' : '#d73a49'
-                  }}>
-                    {failures === 0 ? 'yes' : 'no'}
+                  <strong style={{ color: failed === 0 ? '#2ea44f' : '#d73a49' }}>
+                    {pct}%
                   </strong>
                 </td>
                 <td>
-                  <div className="tier-counts">
-                    {RESULT_LABELS.map(result => {
-                      const count = summary[result]
-                      if (!count) return null
-                      return (
-                        <span key={result} className="count-badge">
-                          <span className={
-                            `dot ${RESULT_COLORS[result]}`
-                          } />
-                          {count}
-                        </span>
-                      )
-                    })}
-                  </div>
+                  <span className="count-detail">
+                    {passed} passed{failed > 0 && <>, <span style={{ color: '#d73a49' }}>{failed} failed</span></>}{other > 0 && <>, {other} other</>}
+                    {' '}/ {summary.total} total
+                  </span>
                 </td>
               </tr>
             )
@@ -242,9 +230,10 @@ export default function App() {
                       (jobsByTier[tier][suite][plat] || []).length > 0
                   )
                   if (!hasJobs) return null
+                  const suiteName = jobsByTier[tier][suite][tierPlatforms.find(p => (jobsByTier[tier][suite][p] || []).length > 0)]?.[0]?.groupName || suite
                   return (
                     <tr key={suite}>
-                      <td>{suite}</td>
+                      <td title={suiteName}>{suite}</td>
                       {tierPlatforms.map(plat => {
                         const platJobs =
                           jobsByTier[tier][suite][plat] || []
