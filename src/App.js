@@ -47,12 +47,10 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [statusMsg, setStatusMsg] = useState('');
   const [jobs, setJobs] = useState([]);
-  const [pushes, setPushes] = useState([]);
   const [pushCount, setPushCount] = useState(5);
 
   useEffect(() => {
     setJobs([]);
-    setPushes([]);
     setIsLoading(true);
     setStatusMsg('fetching autoland pushes...');
 
@@ -65,7 +63,6 @@ function App() {
         if (!pushRes.ok) throw new Error(`push API returned ${pushRes.status}`);
         const pushData = await pushRes.json();
         const fetchedPushes = pushData.results;
-        setPushes(fetchedPushes);
         setStatusMsg(`fetched ${fetchedPushes.length} pushes, loading jobs...`);
 
         // fetch jobs for each push in parallel
